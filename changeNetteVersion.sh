@@ -1,3 +1,3 @@
 #!/bin/sh
 
-sed -i "s|\"nette/nette\": \"~2.0\"|\"nette/nette\": \"$1\"|" composer.json
+sed -iE -e "s#\"nette/forms\":.*#\"nette/forms\": \"$1\"#" -e '1 a "minimum-stability": "dev",' composer.json

@@ -151,7 +151,7 @@
 		return parseDate(date + '-01');
 	};
 	var globalSettings = {
-		datetime: {
+		'datetime-local': {
 			parseFunction: parseDateTime,
 			create: function(object, settings) {
 				return object.datetimepicker(settings);
@@ -161,14 +161,6 @@
 			validFormat: '\\d{4}-\\d{2}-\\d{2}'
 		},
 		date: {
-			parseFunction: parseDate,
-			create: function(object, settings) {
-				return object.datepicker(settings);
-			},
-			dateFormat: 'yy-mm-dd',
-			validFormat: '\\d{4}-\\d{2}-\\d{2}'
-		},
-		'date-of-birth': {
 			parseFunction: parseDate,
 			create: function(object, settings) {
 				return object.datepicker(settings);
@@ -201,8 +193,6 @@
 			validFormat: '\\d{2}:\\d{2}'
 		}
 	};
-	globalSettings['datetime-local'] = globalSettings.datetime;
-	globalSettings['datetime-local'].validFormat += '.*'; // timezone
 
 	$.fn.dateinput = function(userSettings) {
 		this.each(function() {
@@ -243,7 +233,6 @@
 			}
 			alt.attr('data-dateinput-type', null);
 			alt.attr('data-nette-rules', null);
-			t.removeAttr('name');
 			t.val(null);
 			t.after(alt);
 			t.data('altField', alt);
@@ -272,7 +261,6 @@
 
 			//
 			switch (type) {
-				case 'datetime':
 				case 'datetime-local':
 					$.extend(pickerSettings, {
 						altFieldTimeOnly: false,
@@ -292,17 +280,6 @@
 						altFormat: 'yy-mm-dd',
 						showButtonPanel: true,
 						showOtherMonths: true
-					});
-					break;
-				case 'date-of-birth':
-					$.extend(pickerSettings, {
-						altField: alt,
-						altFormat: 'yy-mm-dd',
-						showButtonPanel: true,
-						showOtherMonths: true,
-						changeMonth: true,
-						changeYear: true,
-						yearRange: "-100:+0"
 					});
 					break;
 				case 'month':

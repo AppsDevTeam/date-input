@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /*
  * Copyright (c) 2011, Ondřej Vodáček
  * All rights reserved.
@@ -28,9 +29,12 @@
 
 namespace Vodacek\Forms\Controls;
 
-use Nette\Forms\IControl,
-	Nette\Forms\Controls\BaseControl,
-	Nette\Utils\DateTime;
+use DateTimeInterface;
+use Nette\Forms\Container;
+use Nette\Forms\Controls\BaseControl;
+use Nette\Forms\Form;
+use Nette\Forms\IControl;
+use Nette\Forms\Validator;
 
 /**
  * @author Ondřej Vodáček <ondrej.vodacek@gmail.com>
@@ -39,10 +43,9 @@ use Nette\Forms\IControl,
  */
 class DateInput extends BaseControl  {
 
-	const TYPE_DATETIME = 'datetime',
+	public const
 			TYPE_DATETIME_LOCAL = 'datetime-local',
 			TYPE_DATE = 'date',
-			TYPE_DATE_OF_BIRTH = 'date-of-birth',
 			TYPE_MONTH = 'month',
 			TYPE_TIME = 'time',
 			TYPE_WEEK = 'week';
@@ -51,72 +54,84 @@ class DateInput extends BaseControl  {
 	protected $type;
 
 	/** @var array */
-	protected $range = array('min' => null, 'max' => null);
+	protected $range = ['min' => null, 'max' => null];
 
 	/** @var mixed */
-	protected $submitedValue = null;
+	protected $submittedValue = null;
 
-	private static $formats = array(
-		self::TYPE_DATETIME => 'Y-m-d\TH:i:se',
+	/** @var string */
+	private $dateTimeClass = \DateTime::class;
+
+	public static $defaultValidMessage = 'Please enter a valid date.';
+
+	public static $formats = [
 		self::TYPE_DATETIME_LOCAL => 'Y-m-d\TH:i:s',
 		self::TYPE_DATE => 'Y-m-d',
-		self::TYPE_DATE_OF_BIRTH => 'Y-m-d',
 		self::TYPE_MONTH => 'Y-m',
 		self::TYPE_TIME => 'H:i:s',
 		self::TYPE_WEEK => 'o-\WW'
-	);
+	];
 
-	public static function register() {
-		$class = __CLASS__;
-		\Nette\Forms\Container::extensionMethod('addDate', function (\Nette\Forms\Container $form, $name, $label = null, $type = 'datetime-local') use ($class) {
-			$component = new $class($label, $type);
+	public static function register($immutable = true): void {
+		Container::extensionMethod('addDate', static function (
+			Container $form,
+			string $name,
+			string $label = null,
+			string $type = self::TYPE_DATETIME_LOCAL
+		) use ($immutable) {
+			$component = new self($label, $type, $immutable);
 			$form->addComponent($component, $name);
+			$component->setRequired(false);
+			$component->addRule(static function(self $control) {
+				return self::validateValid($control);
+			}, self::$defaultValidMessage);
 			return $component;
 		});
-		\Nette\Forms\Rules::$defaultMessages[__CLASS__.'::validateDateInputRange'] = \Nette\Forms\Rules::$defaultMessages[\Nette\Forms\Form::RANGE];
-		\Nette\Forms\Rules::$defaultMessages[__CLASS__.'::validateDateInputValid'] = 'Please enter a valid date.';
+		Validator::$messages[__CLASS__.'::validateDateInputRange'] = Validator::$messages[Form::RANGE];
 	}
 
 	/**
-	 * @param string
-	 * @param string
+	 * @param string|null $label
+	 * @param string $type
+	 * @param bool $immutable
 	 * @throws \InvalidArgumentException
 	 */
-	public function __construct($label = null, $type = self::TYPE_DATETIME_LOCAL) {
+	public function __construct(string $label = null, string $type = self::TYPE_DATETIME_LOCAL, bool $immutable = true) {
 		if (!isset(self::$formats[$type])) {
 			throw new \InvalidArgumentException("invalid type '$type' given.");
 		}
 		parent::__construct($label);
 		$this->control->type = $this->type = $type;
 		$this->control->data('dateinput-type', $type);
+
+		if ($immutable) {
+			$this->dateTimeClass = \DateTimeImmutable::class;
+		}
 	}
 
 	public function setValue($value = null) {
-		if ($value === null) {
-			$this->value = null;
-			$this->submitedValue = null;
-		} elseif ($value instanceof \DateTime) {
-			$this->value = DateTime::from($value);
-			$this->submitedValue = null;
+		if ($value === null || $value instanceof DateTimeInterface) {
+			$this->value = $value;
+			$this->submittedValue = null;
 		} elseif ($value instanceof \DateInterval) {
-			$this->value = DateTime::createFromFormat(self::$formats[self::TYPE_TIME], $value->format("%H:%I:%S"));
-			$this->submitedValue = null;
+			$this->value = $this->createFromFormat(self::$formats[self::TYPE_TIME], $value->format('%H:%I:%S'));
+			$this->submittedValue = null;
 		} elseif (is_string($value)) {
 			if ($value === '') {
 				$this->value = null;
-				$this->submitedValue = null;
+				$this->submittedValue = null;
 			} else {
 				$this->value = $this->parseValue($value);
-				if ($this->value !== false) {
-					$this->submitedValue = null;
+				if ($this->value !== null) {
+					$this->submittedValue = null;
 				} else {
 					$this->value = null;
-					$this->submitedValue = $value;
+					$this->submittedValue = $value;
 				}
 			}
 		} else {
-			$this->submitedValue = $value;
-			throw new \InvalidArgumentException("Invalid type for \$value.");
+			$this->submittedValue = $value;
+			throw new \InvalidArgumentException("Invalid type for $value.");
 		}
 		return $this;
 	}
@@ -127,8 +142,8 @@ class DateInput extends BaseControl  {
 		if ($this->value !== null) {
 			$control->value = $this->value->format($format);
 		}
-		if ($this->submitedValue !== null && is_string($this->submitedValue)) {
-			$control->value = $this->submitedValue;
+		if ($this->submittedValue !== null && is_string($this->submittedValue)) {
+			$control->value = $this->submittedValue;
 		}
 		if ($this->range['min'] !== null) {
 			$control->min = $this->range['min']->format($format);
@@ -140,101 +155,80 @@ class DateInput extends BaseControl  {
 	}
 
 	public function addRule($operation, $message = null, $arg = null) {
-		if ($operation === \Nette\Forms\Form::RANGE) {
+		if ($operation === Form::RANGE) {
 			$this->range['min'] = $this->normalizeDate($arg[0]);
 			$this->range['max'] = $this->normalizeDate($arg[1]);
 			$operation = __CLASS__.'::validateDateInputRange';
 			$arg[0] = $this->formatDate($arg[0]);
 			$arg[1] = $this->formatDate($arg[1]);
-		} elseif ($operation === \Nette\Forms\Form::VALID) {
-			$operation = __CLASS__.'::validateDateInputValid';
 		}
 		return parent::addRule($operation, $message, $arg);
 	}
 
-	public static function validateFilled(IControl $control) {
+	public static function validateFilled(IControl $control): bool {
 		if (!$control instanceof self) {
 			throw new \InvalidArgumentException("Cant't validate control '".\get_class($control)."'.");
 		}
-		return ($control->value !== null || $control->submitedValue !== null);
+		return ($control->value !== null || $control->submittedValue !== null);
 	}
 
-	/**
-	 * Valid validator: is control valid?
-	 * @param  IControl
-	 * @return bool
-	 */
-	public static function validateDateInputValid(IControl $control) {
-		return self::validateValid($control);
-	}
-
-	public static function validateValid(IControl $control) {
+	private static function validateValid(IControl $control): bool {
 		if (!$control instanceof self) {
 			throw new \InvalidArgumentException("Cant't validate control '".\get_class($control)."'.");
 		}
-		return $control->submitedValue === null;
+		return $control->submittedValue === null;
 	}
 
-	/**
-	 * @param self $control
-	 * @param array $args
-	 * @return bool
-	 */
-	public static function validateDateInputRange(self $control) {
-		if ($control->range['min'] !== null) {
-			if ($control->range['min'] > $control->value) {
-				return false;
-			}
+	public static function validateDateInputRange(self $control): bool {
+		if (($control->range['min'] !== null) && $control->range['min'] > $control->value) {
+			return false;
 		}
-		if ($control->range['max'] !== null) {
-			if ($control->range['max'] < $control->value) {
-				return false;
-			}
+
+		if (($control->range['max'] !== null) && $control->range['max'] < $control->value) {
+			return false;
 		}
+
 		return true;
 	}
 
-	/**
-	 * @param string $value
-	 * @return DateTime
-	 */
-	private function parseValue($value) {
+	private function parseValue(string $value): ?DateTimeInterface {
 		$date = null;
 		if ($this->type === self::TYPE_WEEK) {
 			try {
-				$date = new DateTime($value."1");
+				$date = $this->createDateTime($value. '1');
 			} catch (\Exception $e) {
-				$date = false;
+				$date = null;
 			}
 		} else {
-			$date = \DateTime::createFromFormat('!'.self::$formats[$this->type], $value);
-			if ($date !== false) {
-				$date = DateTime::from($date);
-			}
+			$date = $this->createFromFormat('!'.self::$formats[$this->type], $value);
 		}
 		return $date;
 	}
 
-	/**
-	 * @param \DateTime $value
-	 * @return string
-	 */
-	private function formatDate(\DateTime $value = null) {
-		if ($value) {
-			$value = $value->format(self::$formats[$this->type]);
+	private function formatDate(?DateTimeInterface $value = null): ?string {
+		if ($value === null) {
+			return null;
 		}
-		return $value;
+
+		return $value->format(self::$formats[$this->type]);
 	}
 
-	/**
-	 * @param \DateTime
-	 * @return DateTime
-	 */
-	private function normalizeDate(\DateTime $value = null) {
-		if ($value) {
-			$value = $this->formatDate($value);
-			$value = $this->parseValue($value);
+	private function normalizeDate(?DateTimeInterface $value): ?DateTimeInterface {
+		if ($value === null) {
+			return null;
 		}
-		return $value;
+
+		return $this->parseValue($this->formatDate($value));
+	}
+
+	private function createDateTime(string $string): DateTimeInterface
+	{
+		return new $this->dateTimeClass($string);
+	}
+
+	private function createFromFormat(string $string): ?DateTimeInterface
+	{
+		$val = call_user_func_array([$this->dateTimeClass, 'createFromFormat'], func_get_args());
+		return $val === false ? null : $val;
 	}
 }
