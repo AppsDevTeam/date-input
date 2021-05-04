@@ -134,15 +134,6 @@ class DateInput extends BaseControl  {
 		return $this;
 	}
 
-	public function validate(): void
-	{
-		if ($this->isDisabled()) {
-			return;
-		}
-		$this->cleanErrors();
-		$this->getRules()->validate(false);
-	}
-
 	public function getControl() {
 		$control = parent::getControl();
 		$format = self::$formats[$this->type];
