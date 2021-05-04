@@ -82,9 +82,7 @@ class DateInput extends BaseControl  {
 			$component = new self($label, $type, $immutable);
 			$form->addComponent($component, $name);
 			$component->setRequired(false);
-			$component
-				->addCondition(Form::FILLED)
-				->addRule([__CLASS__, 'validateValid'], self::$defaultValidMessage);
+			$component->addRule([__CLASS__, 'validateValid'], self::$defaultValidMessage);
 			return $component;
 		});
 		Validator::$messages[__CLASS__.'::validateDateInputRange'] = Validator::$messages[Form::RANGE];
