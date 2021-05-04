@@ -82,9 +82,9 @@ class DateInput extends BaseControl  {
 			$component = new self($label, $type, $immutable);
 			$form->addComponent($component, $name);
 			$component->setRequired(false);
-			$component->addRule(static function(self $control) {
-				return self::validateValid($control);
-			}, self::$defaultValidMessage);
+			$component
+				->addCondition(Form::FILLED)
+				->addRule([__CLASS__, 'validateValid'], self::$defaultValidMessage);
 			return $component;
 		});
 		Validator::$messages[__CLASS__.'::validateDateInputRange'] = Validator::$messages[Form::RANGE];
@@ -136,6 +136,15 @@ class DateInput extends BaseControl  {
 		return $this;
 	}
 
+	public function validate(): void
+	{
+		if ($this->isDisabled()) {
+			return;
+		}
+		$this->cleanErrors();
+		$this->getRules()->validate(false);
+	}
+
 	public function getControl() {
 		$control = parent::getControl();
 		$format = self::$formats[$this->type];
@@ -172,7 +181,7 @@ class DateInput extends BaseControl  {
 		return ($control->value !== null || $control->submittedValue !== null);
 	}
 
-	private static function validateValid(IControl $control): bool {
+	public static function validateValid(IControl $control): bool {
 		if (!$control instanceof self) {
 			throw new \InvalidArgumentException("Cant't validate control '".\get_class($control)."'.");
 		}
@@ -230,5 +239,10 @@ class DateInput extends BaseControl  {
 	{
 		$val = call_user_func_array([$this->dateTimeClass, 'createFromFormat'], func_get_args());
 		return $val === false ? null : $val;
+	}
+
+	public function isFilled(): bool
+	{
+		return parent::isFilled() || $this->submittedValue;
 	}
 }
