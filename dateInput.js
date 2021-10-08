@@ -309,6 +309,8 @@
 							selectedDate = new Date(inst.selectedYear, inst.selectedMonth, 1);
 							t.datepicker('setDate', selectedDate);
 							inst.input.blur();
+
+							inst.input.trigger( "change" ); // fire the change event
 						}
 					});
 					if (pickerSettings.maxDate) {
