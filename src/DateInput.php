@@ -79,10 +79,10 @@ class DateInput extends BaseControl  {
 			string $label = null,
 			string $type = self::TYPE_DATETIME_LOCAL
 		) use ($immutable) {
-			$component = new self($label, $type, $immutable);
+			$component = new static($label, $type, $immutable);
 			$form->addComponent($component, $name);
 			$component->setRequired(false);
-			$component->addRule([__CLASS__, 'validateValid'], self::$defaultValidMessage);
+			$component->addRule([__CLASS__, 'validateValid'], static::$defaultValidMessage);
 			return $component;
 		});
 		Validator::$messages[__CLASS__.'::validateDateInputRange'] = Validator::$messages[Form::RANGE];
@@ -95,7 +95,7 @@ class DateInput extends BaseControl  {
 	 * @throws \InvalidArgumentException
 	 */
 	public function __construct(string $label = null, string $type = self::TYPE_DATETIME_LOCAL, bool $immutable = true) {
-		if (!isset(self::$formats[$type])) {
+		if (!isset(static::$formats[$type])) {
 			throw new \InvalidArgumentException("invalid type '$type' given.");
 		}
 		parent::__construct($label);
@@ -112,7 +112,7 @@ class DateInput extends BaseControl  {
 			$this->value = $value;
 			$this->submittedValue = null;
 		} elseif ($value instanceof \DateInterval) {
-			$this->value = $this->createFromFormat(self::$formats[self::TYPE_TIME], $value->format('%H:%I:%S'));
+			$this->value = $this->createFromFormat(static::$formats[self::TYPE_TIME], $value->format('%H:%I:%S'));
 			$this->submittedValue = null;
 		} elseif (is_string($value)) {
 			if ($value === '') {
@@ -136,7 +136,7 @@ class DateInput extends BaseControl  {
 
 	public function getControl() {
 		$control = parent::getControl();
-		$format = self::$formats[$this->type];
+		$format = static::$formats[$this->type];
 		if ($this->value !== null) {
 			$control->value = $this->value->format($format);
 		}
@@ -198,7 +198,7 @@ class DateInput extends BaseControl  {
 				$date = null;
 			}
 		} else {
-			$date = $this->createFromFormat('!'.self::$formats[$this->type], $value);
+			$date = $this->createFromFormat('!'.static::$formats[$this->type], $value);
 		}
 		return $date;
 	}
@@ -208,7 +208,7 @@ class DateInput extends BaseControl  {
 			return null;
 		}
 
-		return $value->format(self::$formats[$this->type]);
+		return $value->format(static::$formats[$this->type]);
 	}
 
 	private function normalizeDate(?DateTimeInterface $value): ?DateTimeInterface {
