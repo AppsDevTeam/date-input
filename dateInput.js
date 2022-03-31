@@ -389,6 +389,6 @@
 	Nette.validators["VodacekFormsControlsDateInput_validateDateInputRange"] = function(elem, arg, val) {
 		var el = $(elem);
 		val = el.data('altField').val();
-		return Nette.isArray(arg) ? ((arg[0] === null || val >= arg[0]) && (arg[1] === null || val <= arg[1])) : null;
+		return Array.isArray(arg) ? ((arg[0] === null || val >= arg[0]) && (arg[1] === null || val <= arg[1])) : null;
 	};
 })(jQuery, Nette);
