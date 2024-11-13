@@ -128,7 +128,6 @@ class DateInput extends BaseControl
 			$data['maxDate'] = $this->range['max']->format('Y-m-d');
 			$data['maxTime'] = $this->range['max']->format('H:i');
 		}
-		bd ('xxx');
 		$control->data('adt-date-input', json_encode($data));
 
 		return $control;
