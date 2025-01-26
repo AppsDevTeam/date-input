@@ -47,7 +47,7 @@ class DateInput extends BaseControl
 		Container::extensionMethod('addDate2', static function (
 			Container $form,
 			string $name,
-			string $label = null,
+			?string $label = null,
 			string $type = self::TYPE_DATETIME_LOCAL
 		) use ($immutable) {
 			$component = new static($label, $type, $immutable);
@@ -62,7 +62,7 @@ class DateInput extends BaseControl
 	/**
 	 * @throws InvalidArgumentException
 	 */
-	public function __construct(string $label = null, string $type = self::TYPE_DATETIME_LOCAL, bool $immutable = true)
+	public function __construct(?string $label = null, string $type = self::TYPE_DATETIME_LOCAL, bool $immutable = true)
 	{
 		if (!isset(static::$formats[$type])) {
 			throw new InvalidArgumentException("invalid type '$type' given.");
