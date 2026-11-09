@@ -116,7 +116,12 @@ class DateInput extends BaseControl
 		}
 		if (is_string($this->submittedValue)) {
 			$control->value = $this->submittedValue;
-			$data['value'] = (new DateTime($this->submittedValue))->format('Y-m-d H:i:s');
+			// Submitted text rejected by parseValue(): pass a date to the picker only if DateTime can read it. Unreadable
+			// input (typo, scanner payload) used to throw while rendering the form (HTTP 500 instead of a validation error).
+			try {
+				$data['value'] = (new DateTime($this->submittedValue))->format('Y-m-d H:i:s');
+			} catch (Exception $e) {
+			}
 		}
 		if ($this->range['min'] !== null) {
 			$control->min = $this->range['min']->format($format);
